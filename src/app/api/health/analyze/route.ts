@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDbPool, ensureHealthTables } from '@/lib/db';
 import { analyzeHealthData } from '@/ai/flows/health-anomaly-analyzer';
-
-function getUserId(req: NextRequest): string | null { return req.headers.get('x-user-id'); }
+import { getUserIdFromRequest } from '@/lib/auth-helpers';
 
 export async function POST(req: NextRequest) {
   await ensureHealthTables();
-  const userId = getUserId(req);
+  const userId = await getUserIdFromRequest(req);
   const { windowMinutes = 60 } = await req.json();
   if (!userId) return NextResponse.json({ error: 'Missing user' }, { status: 400 });
   const pool = getDbPool();

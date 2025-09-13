@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertTriangle, CheckCircle2, Bot, Sparkles } from "lucide-react";
 import { analyzeHealthData, type HealthDataInput, type HealthDataOutput } from "@/ai/flows/health-anomaly-analyzer";
+import { useAuth } from "@/contexts/auth-context";
 
 const HealthDataFormSchema = z.object({
   bloodPressure: z.string()
@@ -25,7 +26,12 @@ const HealthDataFormSchema = z.object({
 
 type HealthDataFormValues = z.infer<typeof HealthDataFormSchema>;
 
-export function AiAnomalyDetector() {
+interface AiAnomalyDetectorProps {
+  onDataAdded?: () => void;
+}
+
+export function AiAnomalyDetector({ onDataAdded }: AiAnomalyDetectorProps) {
+  const { user } = useAuth();
   const [analysisResult, setAnalysisResult] = useState<HealthDataOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +47,11 @@ export function AiAnomalyDetector() {
   });
 
   const onSubmit: SubmitHandler<HealthDataFormValues> = async (data) => {
+    if (!user) {
+      setError("Please log in to analyze health data.");
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setAnalysisResult(null);
@@ -54,22 +65,32 @@ export function AiAnomalyDetector() {
       await Promise.all([
         fetch('/api/health/readings', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-User-Id': 'demo-user' },
-          body: JSON.stringify({ userId: 'demo-user', metric: 'blood_pressure', valueJson: { systolic, diastolic }, unit: 'mmHg', source: 'manual', takenAt })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ metric: 'blood_pressure', valueJson: { systolic, diastolic }, unit: 'mmHg', source: 'manual', takenAt })
         }),
         fetch('/api/health/readings', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-User-Id': 'demo-user' },
-          body: JSON.stringify({ userId: 'demo-user', metric: 'heart_rate', valueNum: data.heartRate, unit: 'BPM', source: 'manual', takenAt })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ metric: 'heart_rate', valueNum: data.heartRate, unit: 'BPM', source: 'manual', takenAt })
         }),
       ]);
 
       // 2) Analyze recent window via backend (rules + AI)
-      const analyzeRes = await fetch('/api/health/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-User-Id': 'demo-user' }, body: JSON.stringify({ windowMinutes: 120 }) });
+      const analyzeRes = await fetch('/api/health/analyze', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ windowMinutes: 120 }) 
+      });
       if (!analyzeRes.ok) throw new Error('Analysis failed');
       const analyzeJson = await analyzeRes.json();
+      console.log('Analysis result:', analyzeJson);
       if (analyzeJson.ai) setAnalysisResult(analyzeJson.ai as HealthDataOutput);
       if (analyzeJson.rules) setRules(analyzeJson.rules as typeof rules);
+      
+      // Trigger chart refresh
+      if (onDataAdded) {
+        onDataAdded();
+      }
     } catch (e) {
       console.error("Error analyzing health data:", e);
       setError("An unexpected error occurred while analyzing health data. Please try again later.");

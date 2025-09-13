@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDbPool } from '@/lib/db';
 import { ensureChatTables } from '@/lib/db';
+import { getUserIdFromRequest } from '@/lib/auth-helpers';
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Conversation ID required' }, { status: 400 });
     }
     
-    const userId = req.headers.get('x-user-id') || 'default-user';
+    const userId = await getUserIdFromRequest(req);
     
     // Verify ownership and get messages
     const { rows } = await pool.query(`
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
     
-    const userId = req.headers.get('x-user-id') || 'default-user';
+    const userId = await getUserIdFromRequest(req);
     
     // Verify ownership before adding message
     const { rows: convRows } = await pool.query(`

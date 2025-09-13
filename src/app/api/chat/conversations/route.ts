@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDbPool } from '@/lib/db';
 import { ensureChatTables } from '@/lib/db';
+import { getUserIdFromRequest } from '@/lib/auth-helpers';
 
 export async function GET(req: NextRequest) {
   try {
     await ensureChatTables();
     const pool = getDbPool();
     
-    // Get user ID from headers (stub for now)
-    const userId = req.headers.get('x-user-id') || 'default-user';
+    const userId = await getUserIdFromRequest(req);
     
     const { rows } = await pool.query(`
       SELECT id, title, created_at, updated_at
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const pool = getDbPool();
     
     const { title } = await req.json();
-    const userId = req.headers.get('x-user-id') || 'default-user';
+    const userId = await getUserIdFromRequest(req);
     
     const { rows } = await pool.query(`
       INSERT INTO public.chat_conversations (user_id, title)
@@ -57,7 +57,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Conversation ID required' }, { status: 400 });
     }
     
-    const userId = req.headers.get('x-user-id') || 'default-user';
+    const userId = await getUserIdFromRequest(req);
     
     // Verify ownership before deleting
     const { rows } = await pool.query(`

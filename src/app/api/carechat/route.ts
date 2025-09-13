@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { careChatFlow } from '@/ai/flows/carechat';
 import { getDbPool } from '@/lib/db';
 import { ensureChatTables } from '@/lib/db';
+import { getUserIdFromRequest } from '@/lib/auth-helpers';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
     const { message, conversationId } = await req.json();
     if (!message || typeof message !== 'string') return NextResponse.json({ error: 'Missing message' }, { status: 400 });
     
-    const userId = req.headers.get('x-user-id') || 'default-user';
+    const userId = await getUserIdFromRequest(req);
     await ensureChatTables();
     const pool = getDbPool();
     

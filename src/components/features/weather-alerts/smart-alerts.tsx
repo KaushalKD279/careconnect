@@ -40,13 +40,13 @@ export function SmartAlerts({ weatherData }: SmartAlertsProps) {
     }
     
     // High Pollen (mocked, as API doesn't provide it)
-    generatedAlerts.push({
-        id: "pollen",
-        title: "High Pollen Count Expected",
-        message: "Pollen levels may be high today. Consider staying indoors if you have allergies. (Mock Data)",
-        icon: Leaf,
-        type: "info",
-    });
+    // generatedAlerts.push({
+    //     id: "pollen",
+    //     title: "High Pollen Count Expected",
+    //     message: "Pollen levels may be high today. Consider staying indoors if you have allergies. (Mock Data)",
+    //     icon: Leaf,
+    //     type: "info",
+    // });
 
     // Thunderstorm check
     if (weatherData.daily.weatherCode.slice(0, 3).some(code => code === 95)) {

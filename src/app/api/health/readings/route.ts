@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureHealthTables, getDbPool } from '@/lib/db';
-
-function getUserId(req: NextRequest): string | null {
-  return req.headers.get('x-user-id');
-}
+import { getUserIdFromRequest } from '@/lib/auth-helpers';
 
 export async function GET(req: NextRequest) {
   await ensureHealthTables();
-  const userId = getUserId(req);
+  const userId = await getUserIdFromRequest(req);
   const url = new URL(req.url);
   const metric = url.searchParams.get('metric');
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '100', 10), 500);
@@ -30,7 +27,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   await ensureHealthTables();
-  const userId = getUserId(req);
+  const userId = await getUserIdFromRequest(req);
   const body = await req.json();
   const { metric, valueNum, valueJson, unit, source, deviceId, takenAt } = body || {};
   if (!userId) return NextResponse.json({ error: 'Missing user' }, { status: 400 });

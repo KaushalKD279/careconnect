@@ -5,9 +5,10 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Line, 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartTooltip, ChartTooltipContent, ChartContainer, type ChartConfig } from "@/components/ui/chart"
 import { Activity } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 
-type HrPoint = { date: string; heartRate: number }
-type BpPoint = { date: string; systolic: number; diastolic: number }
+type HrPoint = { date: string; fullDate: string; heartRate: number }
+type BpPoint = { date: string; fullDate: string; systolic: number; diastolic: number }
 
 const bpChartConfig = {
   systolic: {
@@ -27,32 +28,53 @@ const hrChartConfig = {
   },
 } satisfies ChartConfig
 
-export function HealthTrendsChart() {
+interface HealthTrendsChartProps {
+  refreshTrigger?: number;
+}
+
+export function HealthTrendsChart({ refreshTrigger = 0 }: HealthTrendsChartProps) {
+  const { user } = useAuth()
   const [bpData, setBpData] = useState<BpPoint[]>([])
   const [hrData, setHrData] = useState<HrPoint[]>([])
 
-  useEffect(() => {
-    const load = async () => {
-      const headers = { 'X-User-Id': 'demo-user' }
+  const loadData = async () => {
+    if (!user) return;
+    
+    try {
       const [bpRes, hrRes] = await Promise.all([
-        fetch('/api/health/readings?metric=blood_pressure&limit=50', { headers }),
-        fetch('/api/health/readings?metric=heart_rate&limit=50', { headers })
+        fetch('/api/health/readings?metric=blood_pressure&limit=50'),
+        fetch('/api/health/readings?metric=heart_rate&limit=50')
       ])
       const [bpJson, hrJson] = await Promise.all([bpRes.json(), hrRes.json()])
-      const bp = (bpJson as any[]).map(r => ({
-        date: new Date(r.taken_at).toLocaleString(),
-        systolic: r.value_json?.systolic ?? 0,
-        diastolic: r.value_json?.diastolic ?? 0,
-      })).reverse()
-      const hr = (hrJson as any[]).map(r => ({
-        date: new Date(r.taken_at).toLocaleString(),
-        heartRate: r.value_num ?? 0,
-      })).reverse()
+      console.log('Chart data loaded:', { bpJson, hrJson });
+      
+      const bp = (bpJson as any[]).map(r => {
+        const date = new Date(r.taken_at);
+        return {
+          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          fullDate: date.toLocaleString(),
+          systolic: r.value_json?.systolic ?? 0,
+          diastolic: r.value_json?.diastolic ?? 0,
+        };
+      }).reverse()
+      const hr = (hrJson as any[]).map(r => {
+        const date = new Date(r.taken_at);
+        return {
+          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          fullDate: date.toLocaleString(),
+          heartRate: r.value_num ?? 0,
+        };
+      }).reverse()
       setBpData(bp)
       setHrData(hr)
+    } catch (error) {
+      console.error('Error loading chart data:', error);
     }
-    void load()
-  }, [])
+  }
+
+  useEffect(() => {
+    void loadData()
+  }, [user, refreshTrigger])
 
   return (
     <Card className="shadow-lg">
@@ -74,7 +96,6 @@ export function HealthTrendsChart() {
                 tickLine={false}
                 tickMargin={10}
                 axisLine={false}
-                tickFormatter={(value) => value.slice(0, 3)}
               />
               <YAxis tickLine={false} axisLine={false} tickMargin={10} />
               <ChartTooltip content={<ChartTooltipContent />} />
@@ -94,7 +115,6 @@ export function HealthTrendsChart() {
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                tickFormatter={(value) => value.slice(0, 3)}
               />
               <YAxis tickLine={false} axisLine={false} tickMargin={10} />
               <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />

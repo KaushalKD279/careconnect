@@ -8,7 +8,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen w-full">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-sidebar-border bg-sidebar md:flex">
         <div className="flex h-16 shrink-0 items-center border-b border-sidebar-border px-6">
-          <Link href="/" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
+          <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-sidebar-foreground">
             <BriefcaseMedical className="h-6 w-6 text-sidebar-primary" />
             <span className="text-lg">CareConnect</span>
           </Link>

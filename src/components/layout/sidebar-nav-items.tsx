@@ -17,7 +17,7 @@ export type NavItem = {
 };
 
 export const mainNavItems: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: HeartPulse },
+  { href: "/dashboard", label: "Dashboard", icon: HeartPulse },
   { href: "/health", label: "Health Monitoring", icon: HeartPulse },
   { href: "/medication", label: "Medication Tracker", icon: Pill },
   { href: "/records", label: "Medical Records", icon: FileText },

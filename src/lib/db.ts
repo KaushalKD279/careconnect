@@ -300,4 +300,52 @@ export async function ensureChatTables(): Promise<void> {
   }
 }
 
+export async function ensureAuthTables(): Promise<void> {
+  const client = await getDbPool().connect();
+  try {
+    await client.query('create extension if not exists "uuid-ossp"');
+    
+    // Create users table
+    const users = await client.query(`select to_regclass('public.users') as reg`);
+    if (!users.rows[0].reg) {
+      await client.query(`create table if not exists public.users (
+        id text primary key,
+        email text unique not null,
+        name text not null,
+        password_hash text,
+        role text not null default 'user' check (role in ('user', 'guest')),
+        created_at timestamptz not null default now()
+      )`);
+      await client.query(`create index if not exists idx_users_email on public.users(email)`);
+    }
+
+    // Create sessions table
+    const sessions = await client.query(`select to_regclass('public.sessions') as reg`);
+    if (!sessions.rows[0].reg) {
+      await client.query(`create table if not exists public.sessions (
+        id text primary key,
+        user_id text not null references public.users(id) on delete cascade,
+        expires_at timestamptz not null,
+        created_at timestamptz not null default now()
+      )`);
+      await client.query(`create index if not exists idx_sessions_user on public.sessions(user_id)`);
+      await client.query(`create index if not exists idx_sessions_expires on public.sessions(expires_at)`);
+    }
+
+    // Insert guest user if it doesn't exist
+    await client.query(`
+      INSERT INTO public.users (id, email, name, role) 
+      VALUES ('guest-user', 'guest@example.com', 'Guest User', 'guest')
+      ON CONFLICT (id) DO NOTHING
+    `);
+
+    console.log('Auth tables ensured');
+  } catch (error) {
+    console.error('Error ensuring auth tables:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 

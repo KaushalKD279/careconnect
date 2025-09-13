@@ -33,3 +33,7 @@ export function truncateText(text: string, maxLength: number = 150): string {
 export function cleanAndTruncateHtml(htmlString: string, maxLength: number = 150): string {
   return truncateText(stripHtml(htmlString), maxLength);
 }
+
+
+
+
